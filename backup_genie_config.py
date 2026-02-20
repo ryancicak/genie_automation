@@ -95,6 +95,11 @@ def main():
     # Retrieve the Git PAT securely
     try:
         git_token = dbutils.secrets.get(scope=SECRET_SCOPE, key=SECRET_KEY)
+        # Debug logging for token (masked)
+        if git_token:
+            print(f"Retrieved Git Token (length: {len(git_token)}, prefix: {git_token[:4]}...)")
+        else:
+            print("ERROR: Retrieved Git Token is empty or None")
     except Exception as e:
         print(f"Error retrieving secret: {e}")
         raise
@@ -128,7 +133,8 @@ def main():
                 print("Changes detected. Committing...")
                 run_git_cmd("git add .", temp_dir)
                 run_git_cmd(f"git commit -m 'Backup: Automated Genie config update for Space {SPACE_ID}'", temp_dir)
-                run_git_cmd("git push origin main", temp_dir)
+                # Explicitly push to the authenticated URL to ensure credentials are used
+                run_git_cmd(f"git push {auth_repo_url} main", temp_dir, safe_cmd=f"git push {safe_repo_url} main")
                 print("Successfully pushed changes to Git.")
             else:
                 print("No changes to commit.")
