@@ -66,14 +66,14 @@ def main():
             raise
 
     # --- 2. Store Secret ---
-    print("\n2. Storing dummy Git PAT secret...")
-    try:
-        w.secrets.put_secret(scope=SCOPE_NAME, key=SECRET_KEY, string_value=SECRET_VALUE)
-        print(f"   Stored secret '{SECRET_KEY}' in scope '{SCOPE_NAME}'")
-        print("   NOTE: Update this with a real GitHub PAT for production!")
-    except Exception as e:
-        print(f"   Secret storage failed: {e}")
-        raise
+    # print("\n2. Storing dummy Git PAT secret...")
+    # try:
+    #     w.secrets.put_secret(scope=SCOPE_NAME, key=SECRET_KEY, string_value=SECRET_VALUE)
+    #     print(f"   Stored secret '{SECRET_KEY}' in scope '{SCOPE_NAME}'")
+    #     print("   NOTE: Update this with a real GitHub PAT for production!")
+    # except Exception as e:
+    #     print(f"   Secret storage failed: {e}")
+    #     raise
 
     # --- 3. Get current user and workspace path ---
     print("\n3. Resolving workspace paths...")

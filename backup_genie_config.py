@@ -23,6 +23,8 @@ import os
 import subprocess
 import argparse
 import sys
+import tempfile
+import shutil
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.runtime import dbutils
 
@@ -59,6 +61,7 @@ def main():
     SECRET_KEY = args.secret_key
     GIT_USERNAME = args.git_username
     GIT_EMAIL = args.git_email
+    REPO_URL = "https://github.com/ryancicak/genie_automation.git"
 
     # --- 1. Fetch Genie Configuration ---
     print(f"Fetching configuration for Genie Space: {SPACE_ID}...")
@@ -81,29 +84,13 @@ def main():
             current_config = {}
         else:
             current_config = json.loads(current_config_str)
-        
-        # Save to a file (pretty-printed for diffability)
-        # We save it in a 'configs' subdirectory to keep the repo clean
-        config_dir = os.path.join(os.getcwd(), "genie_configs")
-        os.makedirs(config_dir, exist_ok=True)
-        
-        config_filename = os.path.join(config_dir, f"space_{SPACE_ID}.json")
-        
-        with open(config_filename, "w") as f:
-            json.dump(current_config, f, indent=2, sort_keys=True)
-            
-        print(f"Configuration saved to {config_filename}")
 
     except Exception as e:
         print(f"Error fetching Genie configuration: {e}")
         raise
 
     # --- 2. Git Operations ---
-    print("Starting Git operations...")
-
-    # Get the current repo root (assuming script is running inside the repo)
-    repo_root = os.getcwd()
-    print(f"Repo root: {repo_root}")
+    print("Starting Git operations in temporary directory...")
 
     # Retrieve the Git PAT securely
     try:
@@ -112,61 +99,43 @@ def main():
         print(f"Error retrieving secret: {e}")
         raise
 
-    # Construct authenticated URL
-    # We need to find the remote URL first
-    try:
-        remote_url_proc = subprocess.run("git config --get remote.origin.url", shell=True, capture_output=True, text=True, cwd=repo_root)
-        original_remote = remote_url_proc.stdout.strip()
+    with tempfile.TemporaryDirectory() as temp_dir:
+        print(f"Created temp directory: {temp_dir}")
         
-        if not original_remote:
-            raise Exception("No remote origin found. Is this a Git repo?")
+        # Clone repo
+        auth_repo_url = REPO_URL.replace("https://", f"https://{GIT_USERNAME}:{git_token}@")
+        safe_repo_url = REPO_URL.replace("https://", f"https://{GIT_USERNAME}:***@")
+        
+        try:
+            run_git_cmd(f"git clone {auth_repo_url} .", temp_dir, safe_cmd=f"git clone {safe_repo_url} .")
             
-        # Parse the repo URL to inject credentials
-        # Handle https://github.com/org/repo.git
-        if "https://" in original_remote:
-            repo_part = original_remote.split("https://")[-1]
-        # Handle git@github.com:org/repo.git
-        elif "git@" in original_remote:
-            repo_part = original_remote.split("git@")[-1].replace(":", "/")
-        else:
-            repo_part = original_remote
-
-        # Construct URL with token: https://user:token@github.com/org/repo.git
-        authenticated_remote = f"https://{GIT_USERNAME}:{git_token}@{repo_part}"
-        safe_remote_log = f"https://{GIT_USERNAME}:***@{repo_part}"
-        
-    except Exception as e:
-        print(f"Error parsing remote URL: {e}")
-        raise
-
-    try:
-        # Configure Git User
-        run_git_cmd(f"git config user.email '{GIT_EMAIL}'", repo_root)
-        run_git_cmd(f"git config user.name '{GIT_USERNAME}'", repo_root)
-        
-        # Set the remote URL with the token
-        # MASK THE TOKEN IN LOGS
-        run_git_cmd(f"git remote set-url origin {authenticated_remote}", repo_root, safe_cmd=f"git remote set-url origin {safe_remote_log}")
-        
-        # Pull latest changes to avoid conflicts
-        print("Pulling latest changes...")
-        run_git_cmd("git pull origin main", repo_root) # Adjust branch if needed
-        
-        # Check status
-        status = run_git_cmd("git status --porcelain", repo_root)
-        
-        if status.stdout.strip():
-            print("Changes detected. Committing...")
-            run_git_cmd("git add .", repo_root)
-            run_git_cmd(f"git commit -m 'Backup: Automated Genie config update for Space {SPACE_ID}'", repo_root)
-            run_git_cmd("git push origin main", repo_root)
-            print("Successfully pushed changes to Git.")
-        else:
-            print("No changes to commit. Configuration is up to date.")
+            # Configure Git
+            run_git_cmd(f"git config user.email '{GIT_EMAIL}'", temp_dir)
+            run_git_cmd(f"git config user.name '{GIT_USERNAME}'", temp_dir)
             
-    except Exception as e:
-        print(f"Git operation failed: {e}")
-        raise
+            # Save config
+            config_dir = os.path.join(temp_dir, "genie_configs")
+            os.makedirs(config_dir, exist_ok=True)
+            config_filename = os.path.join(config_dir, f"space_{SPACE_ID}.json")
+            
+            with open(config_filename, "w") as f:
+                json.dump(current_config, f, indent=2, sort_keys=True)
+            print(f"Saved config to {config_filename}")
+            
+            # Commit and Push
+            status = run_git_cmd("git status --porcelain", temp_dir)
+            if status.stdout.strip():
+                print("Changes detected. Committing...")
+                run_git_cmd("git add .", temp_dir)
+                run_git_cmd(f"git commit -m 'Backup: Automated Genie config update for Space {SPACE_ID}'", temp_dir)
+                run_git_cmd("git push origin main", temp_dir)
+                print("Successfully pushed changes to Git.")
+            else:
+                print("No changes to commit.")
+                
+        except Exception as e:
+            print(f"Git operation failed: {e}")
+            raise
 
 if __name__ == "__main__":
     main()
