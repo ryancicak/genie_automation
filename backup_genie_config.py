@@ -95,11 +95,6 @@ def main():
     # Retrieve the Git PAT securely
     try:
         git_token = dbutils.secrets.get(scope=SECRET_SCOPE, key=SECRET_KEY)
-        # Debug logging for token (masked)
-        if git_token:
-            print(f"Retrieved Git Token (length: {len(git_token)}, prefix: {git_token[:4]}...)")
-        else:
-            print("ERROR: Retrieved Git Token is empty or None")
     except Exception as e:
         print(f"Error retrieving secret: {e}")
         raise
