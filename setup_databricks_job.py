@@ -98,7 +98,7 @@ def main():
         name="Genie Config Backup",
         git_source=jobs.GitSource(
             git_url=git_url,
-            git_provider=jobs.GitProvider.GITHUB,
+            git_provider=jobs.GitProvider.GIT_HUB,
             git_branch="main"
         ),
         tasks=[
