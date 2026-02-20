@@ -96,6 +96,8 @@ def main():
     try:
         git_token = dbutils.secrets.get(scope=SECRET_SCOPE, key=SECRET_KEY)
     except Exception as e:
+        print(f"Error retrieving secret: {e}")
+        raise
 
     with tempfile.TemporaryDirectory() as temp_dir:
         print(f"Created temp directory: {temp_dir}")
