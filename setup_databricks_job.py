@@ -115,15 +115,14 @@ def main():
                         SECRET_KEY,
                     ],
                 ),
-                # Using a basic job cluster. 
-                # Note: For true "Serverless Compute for Jobs", you would typically omit the cluster spec
-                # if your workspace supports/defaults to it, or use a specific serverless profile.
-                # Here we use a standard small cluster to ensure compatibility.
-                new_cluster=compute.ClusterSpec(
-                    spark_version="15.4.x-scala2.12",
-                    node_type_id="m5d.large",
-                    num_workers=1,
-                ),
+                # Use Serverless Compute (by omitting new_cluster/job_cluster_key)
+                # This requires Serverless to be enabled in the workspace.
+                # If Serverless is not enabled, this might fail or fallback depending on workspace config.
+                # new_cluster=compute.ClusterSpec(
+                #     spark_version="15.4.x-scala2.12",
+                #     node_type_id="m5d.large",
+                #     num_workers=1,
+                # ),
             )
         ],
     )
