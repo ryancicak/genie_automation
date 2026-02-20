@@ -1,0 +1,23 @@
+{
+  "config": {
+    "sample_questions": [
+      {
+        "id": "7fd1e2746cd7ab7945bf7627fa1c2f91",
+        "question": [
+          "How many users are in the table?"
+        ]
+      }
+    ]
+  },
+  "data_sources": {
+    "tables": [
+      {
+        "description": [
+          "Table for Genie automation test"
+        ],
+        "identifier": "cicaktest_catalog.default.people"
+      }
+    ]
+  },
+  "version": 2
+}
