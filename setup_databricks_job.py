@@ -101,11 +101,19 @@ def main():
             git_provider=jobs.GitProvider.GIT_HUB,
             git_branch="main"
         ),
+        environments=[
+            jobs.JobEnvironment(
+                environment_key="Default",
+                spec=compute.Environment(client="1")
+            )
+        ],
         tasks=[
             jobs.Task(
                 task_key="backup_task",
+                environment_key="Default",
                 spark_python_task=jobs.SparkPythonTask(
-                    python_file="backup_genie_config.py",  # Relative path in repo
+                    python_file="backup_genie_config.py",
+                    source=jobs.Source.GIT,
                     parameters=[
                         "--space-id",
                         SPACE_ID,
@@ -115,14 +123,6 @@ def main():
                         SECRET_KEY,
                     ],
                 ),
-                # Use Serverless Compute (by omitting new_cluster/job_cluster_key)
-                # This requires Serverless to be enabled in the workspace.
-                # If Serverless is not enabled, this might fail or fallback depending on workspace config.
-                # new_cluster=compute.ClusterSpec(
-                #     spark_version="15.4.x-scala2.12",
-                #     node_type_id="m5d.large",
-                #     num_workers=1,
-                # ),
             )
         ],
     )
