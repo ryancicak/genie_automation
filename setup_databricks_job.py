@@ -84,32 +84,28 @@ def main():
     print(f"   User: {me.user_name}")
     print(f"   Remote path: {remote_script_path}")
 
-    # --- 4. Upload script to workspace ---
-    print("\n4. Uploading backup script to workspace...")
-    if not BACKUP_SCRIPT_LOCAL.exists():
-        raise FileNotFoundError(f"Backup script not found: {BACKUP_SCRIPT_LOCAL}")
-
-    w.workspace.mkdirs(path=remote_dir)
-    with open(BACKUP_SCRIPT_LOCAL, "rb") as f:
-        script_content = f.read()
-
-    w.workspace.upload(
-        remote_script_path,
-        io.BytesIO(script_content),
-        format=ImportFormat.AUTO,
-        overwrite=True,
-    )
-    print(f"   Uploaded to {remote_script_path}")
-
+    # --- 4. (Skipped) Upload script ---
+    print("\n4. Skipping script upload (using Git Source in Job)...")
+    # We don't need to upload the script anymore since the job will pull it from Git
+    
     # --- 5. Create Job ---
     print("\n5. Creating Databricks Job...")
+    
+    # Use Git Source so the job runs from the repo
+    git_url = "https://github.com/ryancicak/genie_automation.git"
+    
     job = w.jobs.create(
-        name="Genie Config Backup (Test)",
+        name="Genie Config Backup",
+        git_source=jobs.GitSource(
+            git_url=git_url,
+            git_provider=jobs.GitProvider.GITHUB,
+            git_branch="main"
+        ),
         tasks=[
             jobs.Task(
                 task_key="backup_task",
                 spark_python_task=jobs.SparkPythonTask(
-                    python_file=remote_script_path,
+                    python_file="backup_genie_config.py",  # Relative path in repo
                     parameters=[
                         "--space-id",
                         SPACE_ID,
@@ -119,9 +115,13 @@ def main():
                         SECRET_KEY,
                     ],
                 ),
+                # Using a basic job cluster. 
+                # Note: For true "Serverless Compute for Jobs", you would typically omit the cluster spec
+                # if your workspace supports/defaults to it, or use a specific serverless profile.
+                # Here we use a standard small cluster to ensure compatibility.
                 new_cluster=compute.ClusterSpec(
-                    spark_version="13.3.x-scala2.12",
-                    node_type_id="m5d.large",  # AWS node type (workspace is on AWS)
+                    spark_version="15.4.x-scala2.12",
+                    node_type_id="m5d.large",
                     num_workers=1,
                 ),
             )
